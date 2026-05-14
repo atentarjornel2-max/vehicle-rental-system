@@ -2,9 +2,9 @@ const mysql = require("mysql2");
 
 // SAME CONNECTION AS SERVER
 const db = mysql.createConnection({
-  host: "YOUR_AIVEN_HOST",
+  host: "vehicle-rental-db-render-aiven-lab.h.aivencloud.com",
   user: "avnadmin",
-  password: "YOUR_PASSWORD",
+  password: "AVNS_hgekTM0vGgPOHACbD0y",
   database: "defaultdb",
   port: 24936,
   ssl: { rejectUnauthorized: false },
