@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vehicles</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>User Panel</h2>
+
+    <a href="/vehicles">Vehicles</a>
+    <a href="/my-bookings">My Bookings</a>
+    <a href="/logout">Logout</a>
+</div>
+
+<div class="main">
+
+    <h1>Available Vehicles</h1>
+
+    <% vehicles.forEach(v => { %>
+        <div class="card">
+            <h3><%= v.name %></h3>
+            <p><%= v.brand %></p>
+            <p>₱<%= v.price_per_day %>/day</p>
+
+            <form action="/api/bookings/create" method="POST">
+                <input type="hidden" name="vehicle_id" value="<%= v.id %>">
+                <button>Book Now</button>
+            </form>
+        </div>
+    <% }) %>
+
+</div>
+
+</body>
+</html>

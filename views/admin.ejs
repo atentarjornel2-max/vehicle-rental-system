@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <h2>Admin Panel</h2>
+
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/vehicles">Vehicles</a>
+    <a href="/admin/bookings">Bookings</a>
+    <a href="/logout">Logout</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+    <h1>Dashboard</h1>
+
+    <div class="card">
+        <h3>Add Vehicle</h3>
+
+        <form action="/api/vehicles/add" method="POST">
+            <input name="name" placeholder="Vehicle Name">
+            <input name="brand" placeholder="Brand">
+            <input name="price_per_day" placeholder="Price per day">
+            <button>Add Vehicle</button>
+        </form>
+    </div>
+
+    <h3>Recent Vehicles</h3>
+
+    <% vehicles.forEach(v => { %>
+        <div class="card">
+            <b><%= v.name %></b> - <%= v.brand %> - ₱<%= v.price_per_day %>
+        </div>
+    <% }) %>
+
+</div>
+
+</body>
+</html>
