@@ -57,10 +57,19 @@ app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_NAME) {
+      console.error("[DB CONFIG ERROR] Missing env vars", {
+        DB_HOST: process.env.DB_HOST,
+        DB_USER: process.env.DB_USER,
+        DB_NAME: process.env.DB_NAME
+      });
+    }
+
     const [users] = await db.query(
       "SELECT * FROM users WHERE email=?",
       [email]
     );
+
 
     if (users.length === 0) return res.send("User not found");
 
@@ -83,10 +92,33 @@ app.post("/login", async (req, res) => {
 
     return res.redirect("/dashboard");
   } catch (err) {
-    console.error("[LOGIN ERROR]", err);
-    return res.send("DB error");
+    // Log full DB error details so Render logs show the real root cause.
+    console.error("[LOGIN ERROR]", {
+      message: err?.message,
+      code: err?.code,
+      errno: err?.errno,
+      sqlState: err?.sqlState,
+      fatal: err?.fatal,
+      sqlMessage: err?.sqlMessage,
+      stack: err?.stack,
+      // Don't leak secrets; just show which endpoint we're connecting to.
+      dbConfigSnapshot: {
+        DB_HOST: process.env.DB_HOST,
+        DB_PORT: process.env.DB_PORT,
+        DB_USER: process.env.DB_USER,
+        DB_NAME: process.env.DB_NAME,
+        sslRejectUnauthorized: Boolean(
+          // mysql2 passes this as part of ssl config; keep a boolean snapshot.
+          false
+        )
+      }
+    });
+
+    return res.status(500).send("DB error (check server logs)");
   }
 });
+
+
 
 // ================= ROUTES =================
 const userRoutes = require("./routes/userRoutes");
