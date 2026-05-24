@@ -69,15 +69,22 @@ app.post("/login", async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.send("Wrong password");
 
-    req.session.user = user;
+    // Unify session shape with routes/userRoutes.js
+    req.session.user = {
+      id: user.id,
+      fullname: user.fullname,
+      email: user.email,
+      role: user.role
+    };
 
     if (user.role === "admin") {
       return res.redirect("/admin");
     }
 
-    res.redirect("/dashboard");
+    return res.redirect("/dashboard");
   } catch (err) {
-    res.send("DB error");
+    console.error("[LOGIN ERROR]", err);
+    return res.send("DB error");
   }
 });
 

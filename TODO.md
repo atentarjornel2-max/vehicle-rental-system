@@ -1,9 +1,11 @@
-- [ ] Update `views/register.ejs` to use the same modern centered “auth bubble” UI as `views/login.ejs`
+# TODO
 
-- [x] Fix `views/login.ejs` to rely on server session redirects (remove localStorage token usage, ensure error messages show correctly)
-
-
-- [ ] Redesign `views/dashboard.ejs` into a centered bubble/card layout
-- [ ] Add/adjust CSS in `public/style.css` for consistent auth + centered dashboard visuals
-- [ ] Run and test: register → login → redirect to `/dashboard`; login as admin → `/admin`; verify layout responsiveness
+- [x] Inspect register/login UI and API route wiring
+- [x] Fix 500 on `POST /api/users/register` by hardening validation and logging (`routes/userRoutes.js`)
+- [x] Unify session shape between `server.js` auth handlers and `routes/userRoutes.js`
+- [ ] Re-test on Render: `POST /api/users/register` from `views/register.ejs`
+- [ ] Verify role-based navigation:
+  - [ ] User -> `/dashboard`
+  - [ ] Admin -> `/admin`
+- [ ] Verify admin-only API endpoints still block non-admin users (`bookingRoutes` approve/reject)
 

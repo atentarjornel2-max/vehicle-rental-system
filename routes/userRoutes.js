@@ -10,22 +10,20 @@ function requireNoLogin(req, res, next) {
 
 // ================= REGISTER =================
 router.post("/register", async (req, res) => {
-  const { fullname, email, password, confirmPassword } = req.body;
-
+  const { fullname, email, password, confirmPassword } = req.body || {};
 
   if (!fullname || !email || !password || !confirmPassword) {
-    return res.send("All fields are required");
+    return res.status(400).send("All fields are required");
   }
 
   if (password !== confirmPassword) {
-    return res.send("Passwords do not match");
+    return res.status(400).send("Passwords do not match");
   }
-
 
   try {
     const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
     if (rows.length > 0) {
-      return res.send("Email already exists");
+      return res.status(409).send("Email already exists");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -35,9 +33,10 @@ router.post("/register", async (req, res) => {
       [fullname, email, hashedPassword]
     );
 
-    res.redirect("/login");
+    return res.redirect("/login");
   } catch (err) {
-    res.send("Register error");
+    console.error("[REGISTER ERROR]", err);
+    return res.status(500).send("Register error");
   }
 });
 
