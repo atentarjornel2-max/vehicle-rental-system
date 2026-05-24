@@ -4,34 +4,21 @@ const db = require("../config/db");
 
 // ================= ADD VEHICLE =================
 router.post("/add", (req, res) => {
+  const { name, brand, price_per_day, status } = req.body;
 
-    const {
-        name,
-        brand,
-        price_per_day
-    } = req.body;
+  const finalStatus = status || "available";
 
-    db.query(
-        `
-        INSERT INTO vehicles (
-            name,
-            brand,
-            price_per_day
-        )
-        VALUES (?, ?, ?)
-        `,
-        [
-            name,
-            brand,
-            price_per_day
-        ],
-        (err) => {
-
-            if (err) return res.send(err);
-
-            res.redirect("/admin");
-        }
-    );
+  db.query(
+    `
+    INSERT INTO vehicles (name, brand, price_per_day, status)
+    VALUES (?, ?, ?, ?)
+    `,
+    [name, brand, price_per_day, finalStatus],
+    (err) => {
+      if (err) return res.send(err);
+      res.redirect("/admin");
+    }
+  );
 });
 
 // ================= DELETE VEHICLE =================

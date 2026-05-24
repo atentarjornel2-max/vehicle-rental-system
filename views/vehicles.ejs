@@ -24,9 +24,13 @@
             <p><%= v.brand %></p>
             <p>₱<%= v.price_per_day %>/day</p>
 
-            <form action="/api/bookings/create" method="POST">
+            <form action="/api/bookings/create" method="POST" class="booking-form">
                 <input type="hidden" name="vehicle_id" value="<%= v.id %>">
-                <button>Book Now</button>
+                <div class="form-row">
+                  <input type="date" name="start_date" required>
+                  <input type="date" name="end_date" required>
+                </div>
+                <button type="submit">Book Now</button>
             </form>
         </div>
     <% }) %>

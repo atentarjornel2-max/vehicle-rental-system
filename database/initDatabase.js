@@ -29,10 +29,14 @@ CREATE TABLE IF NOT EXISTS bookings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
     vehicle_id INT,
+    start_date DATE,
+    end_date DATE,
+    total_price DECIMAL(10,2),
     status VARCHAR(20) DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 `);
+
 
 // REVIEWS
 db.query(`

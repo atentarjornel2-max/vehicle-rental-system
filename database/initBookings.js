@@ -8,9 +8,11 @@ CREATE TABLE IF NOT EXISTS bookings (
     start_date DATE,
     end_date DATE,
     total_price DECIMAL(10,2),
-    status VARCHAR(50) DEFAULT 'pending'
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 `;
+
 
 db.query(sql, (err) => {
     if (err) {

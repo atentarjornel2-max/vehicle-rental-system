@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="dashboard-shell">
+    <div class="dashboard-header">
+      <div>
+        <div class="dashboard-title">Dashboard</div>
+        <div class="dashboard-subtitle">Your booking overview</div>
+      </div>
+
+      <div class="dashboard-actions">
+        <a class="dash-link" href="/vehicles">Browse Vehicles</a>
+        <a class="dash-link dash-link--secondary" href="/my-bookings">My Bookings</a>
+        <a class="dash-link dash-link--danger" href="/logout">Logout</a>
+      </div>
+    </div>
+
+    <div class="dashboard-bubbles">
+      <div class="bubble">
+        <div class="bubble-label">Pending Requests</div>
+        <div class="bubble-value"><%= pending %></div>
+        <div class="bubble-hint">Awaiting admin approval</div>
+      </div>
+
+      <div class="bubble">
+        <div class="bubble-label">Approved Bookings</div>
+        <div class="bubble-value"><%= approved %></div>
+        <div class="bubble-hint">Confirmed rentals</div>
+      </div>
+    </div>
+
+    <div class="bubble bubble--wide">
+      <div class="bubble-wide-title">Quick Actions</div>
+      <div class="bubble-wide-actions">
+        <a class="btn" href="/vehicles">Browse Vehicles</a>
+        <a class="btn btn--secondary" href="/my-bookings">View My Bookings</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

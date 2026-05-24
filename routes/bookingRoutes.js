@@ -3,67 +3,123 @@ const router = express.Router();
 const db = require("../config/db");
 
 // ================= CREATE BOOKING =================
-router.post("/create", (req, res) => {
+// Expects: vehicle_id, start_date, end_date
+router.post("/create", async (req, res) => {
+  try {
+    if (!req.session?.user?.id) return res.redirect("/login");
 
-    const { vehicle_id } = req.body;
+    const { vehicle_id, start_date, end_date } = req.body;
 
-    db.query(
-        `
-        INSERT INTO bookings (
-            user_id,
-            vehicle_id
-        )
-        VALUES (?, ?)
-        `,
-        [
-            req.session.user.id,
-            vehicle_id
-        ],
-        (err) => {
+    if (!vehicle_id || !start_date || !end_date) {
+      return res.send("vehicle_id, start_date and end_date are required");
+    }
 
-            if (err) return res.send(err);
+    const start = new Date(start_date);
+    const end = new Date(end_date);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return res.send("Invalid dates");
+    if (end < start) return res.send("end_date must be >= start_date");
 
-            res.redirect("/my-bookings");
-        }
+    const vehicleRows = await db.query(
+      "SELECT id, price_per_day FROM vehicles WHERE id = ?",
+      [vehicle_id]
     );
+
+    const vehicle = vehicleRows[0]?.[0] || vehicleRows[0]?.[0];
+    const pricePerDay = vehicle?.price_per_day;
+    if (!pricePerDay) return res.send("Vehicle not found");
+
+    // nights/days count (simple inclusive days)
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const days = Math.floor((end.getTime() - start.getTime()) / msPerDay) + 1;
+    const totalPrice = Number(days) * Number(pricePerDay);
+
+    const sql = `
+      INSERT INTO bookings (user_id, vehicle_id, start_date, end_date, total_price, status)
+      VALUES (?, ?, ?, ?, ?, 'pending')
+    `;
+
+    await db.query(sql, [req.session.user.id, vehicle_id, start_date, end_date, totalPrice]);
+    res.redirect("/my-bookings");
+  } catch (err) {
+    res.send(String(err.message || err));
+  }
 });
 
-// ================= APPROVE BOOKING =================
-router.post("/approve/:id", (req, res) => {
+// ================= APPROVE BOOKING (transaction + conflict check) =================
+router.post("/approve/:id", async (req, res) => {
+  try {
+    if (req.session?.user?.role !== "admin") return res.status(403).send("No access");
 
-    db.query(
-        `
-        UPDATE bookings
-        SET status = 'approved'
-        WHERE id = ?
-        `,
-        [req.params.id],
-        (err) => {
+    const bookingId = req.params.id;
 
-            if (err) return res.send(err);
+    await db.query("START TRANSACTION");
 
-            res.redirect("/admin");
-        }
+    const [bookingRows] = await db.query(
+      `
+      SELECT * FROM bookings WHERE id = ? FOR UPDATE
+      `,
+      [bookingId]
     );
+
+    const booking = bookingRows?.[0] || bookingRows?.[0];
+    if (!booking) {
+      await db.query("ROLLBACK");
+      return res.send("Booking not found");
+    }
+
+    if (booking.status !== "pending") {
+      await db.query("ROLLBACK");
+      return res.send("Booking is not pending");
+    }
+
+    // Overlap check with other approved bookings for the same vehicle
+    const [conflicts] = await db.query(
+      `
+      SELECT id
+      FROM bookings
+      WHERE vehicle_id = ?
+        AND status = 'approved'
+        AND id <> ?
+        AND NOT (end_date < ? OR start_date > ?)
+      `,
+      [booking.vehicle_id, bookingId, booking.start_date, booking.end_date]
+    );
+
+    if (conflicts.length > 0) {
+      await db.query("ROLLBACK");
+      return res.send("Cannot approve: vehicle is already booked for these dates");
+    }
+
+    await db.query(
+      "UPDATE bookings SET status = 'approved' WHERE id = ?",
+      [bookingId]
+    );
+
+    await db.query("COMMIT");
+    res.redirect("/admin");
+  } catch (err) {
+    try { await db.query("ROLLBACK"); } catch (e) {}
+    res.send(String(err.message || err));
+  }
 });
 
 // ================= REJECT BOOKING =================
-router.post("/reject/:id", (req, res) => {
+router.post("/reject/:id", async (req, res) => {
+  try {
+    if (req.session?.user?.role !== "admin") return res.status(403).send("No access");
 
-    db.query(
-        `
-        UPDATE bookings
-        SET status = 'rejected'
-        WHERE id = ?
-        `,
-        [req.params.id],
-        (err) => {
+    const bookingId = req.params.id;
 
-            if (err) return res.send(err);
-
-            res.redirect("/admin");
-        }
+    await db.query(
+      "UPDATE bookings SET status = 'rejected' WHERE id = ?",
+      [bookingId]
     );
+
+    res.redirect("/admin");
+  } catch (err) {
+    res.send(String(err.message || err));
+  }
 });
 
 module.exports = router;
+

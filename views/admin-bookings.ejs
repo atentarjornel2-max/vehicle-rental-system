@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - Bookings</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/vehicles">Vehicles</a>
+    <a href="/admin/bookings">Bookings</a>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <div class="main">
+    <h1>Bookings</h1>
+
+    <% if (!bookings || bookings.length === 0) { %>
+      <div class="card"><p>No bookings.</p></div>
+    <% } else { %>
+      <% bookings.forEach(b => { %>
+        <div class="card">
+          <h3 style="margin-bottom:6px;"><%= b.vehicle_name %> (<%= b.vehicle_brand %>)</h3>
+          <p><b>User:</b> <%= b.fullname %></p>
+          <p><b>Dates:</b> <%= b.start_date %> → <%= b.end_date %></p>
+          <p><b>Total:</b> ₱<%= b.total_price %></p>
+          <p><b>Status:</b> <%= b.status %></p>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+</body>
+</html>
+

@@ -1,46 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="/style.css">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-
-<!-- SIDEBAR -->
-<div class="sidebar">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
     <h2>Admin Panel</h2>
-
     <a href="/admin">Dashboard</a>
     <a href="/admin/vehicles">Vehicles</a>
     <a href="/admin/bookings">Bookings</a>
     <a href="/logout">Logout</a>
-</div>
+  </div>
 
-<!-- MAIN -->
-<div class="main">
+  <div class="main">
+    <h1>Admin Dashboard</h1>
 
-    <h1>Dashboard</h1>
-
-    <div class="card">
-        <h3>Add Vehicle</h3>
-
-        <form action="/api/vehicles/add" method="POST">
-            <input name="name" placeholder="Vehicle Name">
-            <input name="brand" placeholder="Brand">
-            <input name="price_per_day" placeholder="Price per day">
-            <button>Add Vehicle</button>
-        </form>
+    <div class="grid">
+      <div class="card">
+        <h3>Pending Requests</h3>
+        <p class="big"><%= pendingBookings ? pendingBookings.length : 0 %></p>
+      </div>
+      <div class="card">
+        <h3>Total Vehicles</h3>
+        <p class="big"><%= vehicles ? vehicles.length : 0 %></p>
+      </div>
     </div>
 
-    <h3>Recent Vehicles</h3>
+    <div class="card" style="margin-top:16px;">
+      <h3>Add Vehicle</h3>
+      <form action="/api/vehicles/add" method="POST" class="form">
+        <input name="name" placeholder="Vehicle Name" required>
+        <input name="brand" placeholder="Brand" required>
+        <input name="price_per_day" type="number" step="0.01" placeholder="Price per day" required>
+        <input name="status" placeholder="Status (available/unavailable)" value="available">
+        <button type="submit">Add Vehicle</button>
+      </form>
+    </div>
 
-    <% vehicles.forEach(v => { %>
+    <h3 style="margin-top:16px;">Pending Bookings</h3>
+
+    <% if (!pendingBookings || pendingBookings.length === 0) { %>
+      <div class="card"><p>No pending bookings.</p></div>
+    <% } else { %>
+      <% pendingBookings.forEach(b => { %>
         <div class="card">
-            <b><%= v.name %></b> - <%= v.brand %> - ₱<%= v.price_per_day %>
+          <h3 style="margin-bottom:6px;"><%= b.vehicle_name %></h3>
+          <p><b>User:</b> <%= b.fullname %></p>
+          <p><b>Dates:</b> <%= b.start_date %> → <%= b.end_date %></p>
+          <p><b>Total:</b> ₱<%= b.total_price %></p>
+
+          <div class="row" style="margin-top:10px;">
+            <form action="/api/bookings/approve/<%= b.id %>" method="POST" style="flex:1;">
+              <button type="submit" class="btn btn--secondary" style="width:100%;">Approve</button>
+            </form>
+            <form action="/api/bookings/reject/<%= b.id %>" method="POST" style="flex:1;">
+              <button type="submit" class="btn btn--danger" style="width:100%;">Reject</button>
+            </form>
+          </div>
         </div>
-    <% }) %>
-
-</div>
-
+      <% }) %>
+    <% } %>
+  </div>
 </body>
 </html>
+

@@ -1,17 +1,14 @@
-require("dotenv").config();
 const express = require("express");
-const mysql = require("mysql2");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
-const path = require("path");
+require("dotenv").config();
+
+const db = require("./config/db");
 
 const app = express();
 
-// =====================
-// MIDDLEWARE
-// =====================
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
+app.set("views", "views");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -19,165 +16,185 @@ app.use(express.static("public"));
 
 app.use(
   session({
-    secret: "vehicle_rental_secret",
+    secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: false
   })
 );
 
-// =====================
-// DATABASE CONNECTION
-// =====================
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-  ssl: { rejectUnauthorized: false },
-});
-
-db.connect((err) => {
-  if (err) {
-    console.log("❌ DB Error:", err.message);
-  } else {
-    console.log("✅ Database connected successfully");
-  }
-});
-
-// =====================
-// HOME ROUTE (FIX FOR "Cannot GET /")
-// =====================
+// ================= HOME =================
 app.get("/", (req, res) => {
-  res.redirect("/login");
+  // If logged in, send them to the right dashboard.
+  if (req.session?.user?.id) {
+    if (req.session.user.role === "admin") return res.redirect("/admin");
+    return res.redirect("/dashboard");
+  }
+  res.render("index");
 });
 
-// =====================
-// LOGIN PAGE
-// =====================
-app.get("/login", (req, res) => {
-  res.render("login");
-});
 
-// =====================
-// REGISTER PAGE
-// =====================
-app.get("/register", (req, res) => {
-  res.render("register");
-});
-
-// =====================
-// REGISTER USER
-// =====================
+// ================= REGISTER =================
 app.post("/register", async (req, res) => {
   const { fullname, email, password } = req.body;
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashed = await bcrypt.hash(password, 10);
 
-  db.query(
-    "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user')",
-    [fullname, email, hashedPassword],
-    (err) => {
-      if (err) {
-        console.log(err);
-        return res.send("❌ Register failed");
-      }
-      res.redirect("/login");
-    }
-  );
+  try {
+    await db.query(
+      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user')",
+      [fullname, email, hashed]
+    );
+
+    res.redirect("/login");
+  } catch (err) {
+    res.send("Register error");
+  }
 });
 
-// =====================
-// LOGIN USER (FIXED)
-// =====================
-app.post("/login", (req, res) => {
+// ================= LOGIN =================
+app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
-    if (err || results.length === 0) {
-      return res.send("❌ User not found");
-    }
+  try {
+    const [users] = await db.query(
+      "SELECT * FROM users WHERE email=?",
+      [email]
+    );
 
-    const user = results[0];
+    if (users.length === 0) return res.send("User not found");
+
+    const user = users[0];
 
     const match = await bcrypt.compare(password, user.password);
-
-    if (!match) {
-      return res.send("❌ Wrong password");
-    }
+    if (!match) return res.send("Wrong password");
 
     req.session.user = user;
 
     if (user.role === "admin") {
       return res.redirect("/admin");
-    } else {
-      return res.redirect("/vehicles");
     }
-  });
-});
 
-// =====================
-// MIDDLEWARE (AUTH CHECK)
-// =====================
-function isLoggedIn(req, res, next) {
-  if (!req.session.user) return res.redirect("/login");
-  next();
-}
-
-function isAdmin(req, res, next) {
-  if (!req.session.user || req.session.user.role !== "admin") {
-    return res.send("❌ Access denied (Admin only)");
+    res.redirect("/dashboard");
+  } catch (err) {
+    res.send("DB error");
   }
-  next();
+});
+
+// ================= ROUTES =================
+const userRoutes = require("./routes/userRoutes");
+const vehicleRoutes = require("./routes/vehicleRoutes");
+const bookingRoutes = require("./routes/bookingRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+
+// API
+app.use("/api/users", userRoutes);
+app.use("/api/vehicles", vehicleRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/reviews", reviewRoutes);
+
+// Auth helpers
+function requireLogin(req, res, next) {
+  if (req.session?.user?.id) return next();
+  return res.redirect("/login");
 }
 
-// =====================
-// USER VEHICLES PAGE
-// =====================
-app.get("/vehicles", isLoggedIn, (req, res) => {
-  db.query("SELECT * FROM vehicles", (err, results) => {
-    if (err) return res.send("Error loading vehicles");
+function requireAdmin(req, res, next) {
+  if (req.session?.user?.role === "admin") return next();
+  return res.status(403).send("No access");
+}
 
-    res.render("vehicles", {
-      user: req.session.user,
-      vehicles: results,
-    });
+// Pages
+app.get("/login", (req, res) => res.render("login"));
+app.get("/register", (req, res) => res.render("register"));
+
+app.get("/vehicles", requireLogin, async (req, res) => {
+  const [vehicles] = await db.query(
+    "SELECT id, name, brand, price_per_day, status, image FROM vehicles ORDER BY id DESC"
+  );
+  res.render("vehicles", { vehicles });
+});
+
+app.get("/my-bookings", requireLogin, async (req, res) => {
+  const [rows] = await db.query(
+    `
+    SELECT b.*, v.name AS vehicle_name, v.brand AS vehicle_brand
+    FROM bookings b
+    JOIN vehicles v ON v.id = b.vehicle_id
+    WHERE b.user_id = ?
+    ORDER BY b.created_at DESC
+    `,
+    [req.session.user.id]
+  );
+
+  const bookings = rows.map(r => ({
+    ...r,
+    status_class:
+      r.status === "approved" ? "badge--green" :
+      r.status === "rejected" ? "badge--red" :
+      "badge--yellow"
+  }));
+
+  res.render("my-bookings", { bookings });
+});
+
+app.get("/dashboard", requireLogin, async (req, res) => {
+  const [pending] = await db.query(
+    "SELECT COUNT(*) AS c FROM bookings WHERE user_id=? AND status='pending'",
+    [req.session.user.id]
+  );
+  const [approved] = await db.query(
+    "SELECT COUNT(*) AS c FROM bookings WHERE user_id=? AND status='approved'",
+    [req.session.user.id]
+  );
+
+  res.render("dashboard", {
+    pending: pending[0]?.c || 0,
+    approved: approved[0]?.c || 0
   });
 });
 
-// =====================
-// ADMIN DASHBOARD
-// =====================
-app.get("/admin", isAdmin, (req, res) => {
-  db.query("SELECT * FROM vehicles", (err, vehicles) => {
-    if (err) return res.send("Error");
+app.get("/admin", requireAdmin, async (req, res) => {
+  const [vehicles] = await db.query("SELECT * FROM vehicles ORDER BY id DESC");
+  const [pendingBookings] = await db.query(
+    `
+    SELECT b.*, v.name AS vehicle_name, v.brand AS vehicle_brand, u.fullname
+    FROM bookings b
+    JOIN vehicles v ON v.id=b.vehicle_id
+    JOIN users u ON u.id=b.user_id
+    WHERE b.status='pending'
+    ORDER BY b.created_at DESC
+    `
+  );
 
-    db.query("SELECT * FROM bookings", (err2, bookings) => {
-      if (err2) return res.send("Error");
-
-      res.render("admin", {
-        user: req.session.user,
-        vehicles,
-        bookings,
-      });
-    });
-  });
+  res.render("admin", { vehicles, pendingBookings });
 });
 
-// =====================
-// LOGOUT
-// =====================
+app.get("/admin/vehicles", requireAdmin, async (req, res) => {
+  const [vehicles] = await db.query("SELECT * FROM vehicles ORDER BY id DESC");
+  res.render("admin-vehicles", { vehicles });
+});
+
+app.get("/admin/bookings", requireAdmin, async (req, res) => {
+  const [bookings] = await db.query(
+    `
+    SELECT b.*, v.name AS vehicle_name, v.brand AS vehicle_brand, u.fullname
+    FROM bookings b
+    JOIN vehicles v ON v.id=b.vehicle_id
+    JOIN users u ON u.id=b.user_id
+    ORDER BY b.created_at DESC
+    `
+  );
+  res.render("admin-bookings", { bookings });
+});
+
+app.post("/logout", (req, res) => {
+  req.session.destroy(() => res.redirect("/login"));
+});
 app.get("/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.redirect("/login");
-  });
+  req.session.destroy(() => res.redirect("/login"));
 });
 
-// =====================
-// START SERVER
-// =====================
-const PORT = process.env.PORT || 5001;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// ================= START SERVER =================
+app.listen(process.env.PORT || 5001, () => {
+  console.log("Server running");
 });

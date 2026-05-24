@@ -1,18 +1,54 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <link rel="stylesheet" href="/style.css">
-    <title>Home</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vehicle Rental - Home</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
 
-<div class="container">
-    <h1>🚗 Vehicle Rental</h1>
+  <div class="hero">
+    <nav class="hero-nav">
+      <div class="hero-brand">
+        <span class="hero-car">🚗</span>
+        <span>Vehicle Rental</span>
+      </div>
 
-    <a href="/login">Login</a>
-    <a href="/register">Register</a>
-    <a href="/vehicles">Vehicles</a>
-</div>
+      <div class="hero-links">
+        <a class="hero-link" href="/login">Login</a>
+        <a class="hero-link hero-link--primary" href="/register">Register</a>
+      </div>
+    </nav>
+
+    <div class="hero-content">
+      <h1 class="hero-title">Modern Vehicle Rental Management System</h1>
+      <p class="hero-subtitle">
+        Book vehicles easily, track your rentals, and manage requests with a clean admin panel.
+      </p>
+
+      <div class="hero-cta">
+        <a class="btn hero-btn" href="/vehicles">Browse Vehicles</a>
+        <a class="btn btn--secondary hero-btn" href="/my-bookings">My Bookings</a>
+      </div>
+    </div>
+
+    <div class="hero-highlight">
+      <div class="highlight-card">
+        <div class="highlight-title">Fast Booking</div>
+        <div class="highlight-text">Choose dates and confirm rental requests.</div>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-title">Admin Approvals</div>
+        <div class="highlight-text">Pending bookings get reviewed and approved.</div>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-title">Clear Dashboard</div>
+        <div class="highlight-text">See pending and approved bookings instantly.</div>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
+

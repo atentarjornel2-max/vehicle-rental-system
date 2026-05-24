@@ -3,88 +3,74 @@ const router = express.Router();
 const bcrypt = require("bcrypt");
 const db = require("../config/db");
 
+function requireNoLogin(req, res, next) {
+  if (req.session?.user?.id) return res.redirect("/dashboard");
+  next();
+}
+
 // ================= REGISTER =================
 router.post("/register", async (req, res) => {
+  const { fullname, email, password, confirmPassword } = req.body;
 
-    const { fullname, email, password } = req.body;
 
-    if (!fullname || !email || !password) {
-        return res.send("All fields are required");
+  if (!fullname || !email || !password || !confirmPassword) {
+    return res.send("All fields are required");
+  }
+
+  if (password !== confirmPassword) {
+    return res.send("Passwords do not match");
+  }
+
+
+  try {
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (rows.length > 0) {
+      return res.send("Email already exists");
     }
 
-    db.query(
-        "SELECT * FROM users WHERE email = ?",
-        [email],
-        async (err, result) => {
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-            if (err) return res.send(err);
-
-            if (result.length > 0) {
-                return res.send("Email already exists");
-            }
-
-            const hashedPassword = await bcrypt.hash(password, 10);
-
-            db.query(
-                `
-                INSERT INTO users (fullname, email, password)
-                VALUES (?, ?, ?)
-                `,
-                [fullname, email, hashedPassword],
-                (err2) => {
-
-                    if (err2) return res.send(err2);
-
-                    res.redirect("/login");
-                }
-            );
-        }
+    await db.query(
+      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user')",
+      [fullname, email, hashedPassword]
     );
+
+    res.redirect("/login");
+  } catch (err) {
+    res.send("Register error");
+  }
 });
 
 // ================= LOGIN =================
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-    const { email, password } = req.body;
+  try {
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
 
-    db.query(
-        "SELECT * FROM users WHERE email = ?",
-        [email],
-        async (err, result) => {
+    if (rows.length === 0) return res.send("User not found");
 
-            if (err) return res.send(err);
+    const user = rows[0];
 
-            if (result.length === 0) {
-                return res.send("User not found");
-            }
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) return res.send("Incorrect password");
 
-            const user = result[0];
+    req.session.user = {
+      id: user.id,
+      fullname: user.fullname,
+      email: user.email,
+      role: user.role
+    };
 
-            const validPassword = await bcrypt.compare(
-                password,
-                user.password
-            );
+    if (user.role === "admin") {
+      return res.redirect("/admin");
+    }
 
-            if (!validPassword) {
-                return res.send("Incorrect password");
-            }
-
-            req.session.user = {
-                id: user.id,
-                fullname: user.fullname,
-                email: user.email,
-                role: user.role
-            };
-
-            // ADMIN REDIRECT
-            if (user.role === "admin") {
-                return res.redirect("/admin");
-            }
-
-            // USER REDIRECT
-            res.redirect("/vehicles");
-        }
-    );
+    res.redirect("/dashboard");
+  } catch (err) {
+    res.send("Login error");
+  }
 });
 
 module.exports = router;
+
