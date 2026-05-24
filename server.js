@@ -16,7 +16,8 @@ app.use(express.static("public"));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    // Render error fix: express-session requires a non-empty secret in production
+    secret: process.env.SESSION_SECRET || "dev_session_secret",
     resave: false,
     saveUninitialized: false
   })
@@ -194,7 +195,14 @@ app.get("/logout", (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
 });
 
+// ================= ERROR HANDLER (logs stack trace) =================
+app.use((err, req, res, next) => {
+  console.error("[ERROR]", err);
+  res.status(500).send("Internal Server Error");
+});
+
 // ================= START SERVER =================
 app.listen(process.env.PORT || 5001, () => {
   console.log("Server running");
 });
+
