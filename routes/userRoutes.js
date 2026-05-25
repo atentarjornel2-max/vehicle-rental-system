@@ -10,13 +10,10 @@ function requireNoLogin(req, res, next) {
   next();
 }
 
-
 // ================= REGISTER =================
 router.post("/register", requireNoLogin, async (req, res) => {
-
   const { fullname, email, password, confirmPassword } = req.body || {};
 
-// UI form posts here (no Postman). Use redirects + session creation.
   if (!fullname || !email || !password || !confirmPassword) {
     return res.status(400).send("All fields are required");
   }
@@ -38,9 +35,11 @@ router.post("/register", requireNoLogin, async (req, res) => {
       [fullname, email, hashedPassword]
     );
 
-    // auto-login after register
     const newUserId = result?.insertId;
-    const [createdRows] = await db.query("SELECT id, fullname, email, role FROM users WHERE id = ?", [newUserId]);
+    const [createdRows] = await db.query(
+      "SELECT id, fullname, email, role FROM users WHERE id = ?",
+      [newUserId]
+    );
     const user = createdRows?.[0];
 
     if (user?.id) {
@@ -48,38 +47,26 @@ router.post("/register", requireNoLogin, async (req, res) => {
         id: user.id,
         fullname: user.fullname,
         email: user.email,
-        role: user.role
+        role: user.role,
       };
-
       return res.redirect(user.role === "admin" ? "/admin" : "/dashboard");
     }
 
     return res.redirect("/login");
+
   } catch (err) {
     console.error("[REGISTER ERROR]", {
       message: err?.message,
       code: err?.code,
-      errno: err?.errno,
-      sqlState: err?.sqlState,
-      fatal: err?.fatal,
       sqlMessage: err?.sqlMessage,
       stack: err?.stack,
-      // Avoid leaking secrets; only log which DB fields are set
-      dbConfigSnapshot: {
-        DB_HOST: process.env.DB_HOST,
-        DB_PORT: process.env.DB_PORT,
-        DB_USER: process.env.DB_USER,
-        DB_NAME: process.env.DB_NAME
-      }
     });
 
-    return res.status(500).send("Register error (check server logs)");
+    // TEMPORARY: shows real error in browser — remove after you identify the issue
+    return res.status(500).send(
+      `DB Error: ${err.message} | Code: ${err.code} | SQL: ${err.sqlMessage || "n/a"}`
+    );
   }
-
 });
 
-
-
 module.exports = router;
-
-

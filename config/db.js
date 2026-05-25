@@ -1,25 +1,11 @@
 const mysql = require("mysql2/promise");
 require("dotenv").config();
 
-const requiredEnv = [
-  "DB_HOST",
-  "DB_PORT",
-  "DB_USER",
-  "DB_PASSWORD",
-  "DB_NAME"
-];
-
+const requiredEnv = ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"];
 const missing = requiredEnv.filter((k) => !process.env[k]);
 
 if (missing.length) {
-  // Fail fast on Render so the real cause shows up immediately in logs.
   console.error("[DB CONFIG ERROR] Missing env vars:", missing);
-  console.error("[DB CONFIG ERROR] Current env snapshot:", {
-    DB_HOST: process.env.DB_HOST,
-    DB_PORT: process.env.DB_PORT,
-    DB_USER: process.env.DB_USER,
-    DB_NAME: process.env.DB_NAME
-  });
   throw new Error(`Missing required DB env vars: ${missing.join(", ")}`);
 }
 
@@ -29,14 +15,24 @@ const pool = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-
-  ssl: {
-    rejectUnauthorized: false
-  },
-
+  ssl: { rejectUnauthorized: false },
   waitForConnections: true,
-  connectionLimit: 10
+  connectionLimit: 10,
 });
 
-module.exports = pool;
+// ✅ Test connection at startup so the real error shows immediately in logs
+pool.getConnection()
+  .then((conn) => {
+    console.log("[DB] Connected successfully to", process.env.DB_HOST);
+    conn.release();
+  })
+  .catch((err) => {
+    console.error("[DB CONNECTION FAILED]", {
+      message: err.message,
+      code: err.code,
+      errno: err.errno,
+      sqlState: err.sqlState,
+    });
+  });
 
+module.exports = pool;
