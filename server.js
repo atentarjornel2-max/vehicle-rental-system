@@ -6,6 +6,9 @@ require("dotenv").config();
 
 const db = require("./config/db");
 
+// Render fix: ensure tables/admin exist at startup so /login doesn't fail with "User not found"
+require("./database/seedOnStartup");
+
 const app = express();
 
 app.set("view engine", "ejs");

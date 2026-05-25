@@ -59,13 +59,8 @@ router.post("/register", requireNoLogin, async (req, res) => {
       message: err?.message,
       code: err?.code,
       sqlMessage: err?.sqlMessage,
-      stack: err?.stack,
     });
-
-    // TEMPORARY: shows real error in browser — remove after you identify the issue
-    return res.status(500).send(
-      `DB Error: ${err.message} | Code: ${err.code} | SQL: ${err.sqlMessage || "n/a"}`
-    );
+    return res.status(500).send("Registration failed. Please try again.");
   }
 });
 
