@@ -1,11 +1,10 @@
-# TODO
+# Task Progress
 
-- [x] Inspect register/login UI and API route wiring
-- [x] Fix 500 on `POST /api/users/register` by hardening validation and logging (`routes/userRoutes.js`)
-- [x] Unify session shape between `server.js` auth handlers and `routes/userRoutes.js`
-- [ ] Re-test on Render: `POST /api/users/register` from `views/register.ejs`
-- [ ] Verify role-based navigation:
-  - [ ] User -> `/dashboard`
-  - [ ] Admin -> `/admin`
-- [ ] Verify admin-only API endpoints still block non-admin users (`bookingRoutes` approve/reject)
+- [x] Unify register so UI registration actually works (no Postman required)
+- [x] Unify login/register behavior and remove API/UI mismatch
+- [x] Add shared auth middleware (`requireLogin`, `requireAdmin`) for maintainability
+- [x] Fix DB usage consistency (async/await) where mysql2 pool is used with callbacks
+- [x] Secure admin seed script (no hard-coded credentials, hash password)
+- [x] Add clear instruction: how to become an admin (seed script + env vars)
+- [x] Quick manual test checklist (Register/Login/User/Admin flows)
 

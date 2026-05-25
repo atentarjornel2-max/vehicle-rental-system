@@ -3,6 +3,7 @@ const session = require("express-session");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
 
+
 const db = require("./config/db");
 
 const app = express();
@@ -34,27 +35,13 @@ app.get("/", (req, res) => {
 });
 
 
-// ================= REGISTER =================
-app.post("/register", async (req, res) => {
-  const { fullname, email, password } = req.body;
-
-  const hashed = await bcrypt.hash(password, 10);
-
-  try {
-    await db.query(
-      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user')",
-      [fullname, email, hashed]
-    );
-
-    res.redirect("/login");
-  } catch (err) {
-    res.send("Register error");
-  }
-});
+// (register route is handled by routes/userRoutes.js)
 
 // ================= LOGIN =================
+
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
+
 
   try {
     if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_NAME) {
@@ -133,19 +120,14 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/reviews", reviewRoutes);
 
 // Auth helpers
-function requireLogin(req, res, next) {
-  if (req.session?.user?.id) return next();
-  return res.redirect("/login");
-}
+const { requireLogin, requireAdmin } = require("./middleware/auth");
 
-function requireAdmin(req, res, next) {
-  if (req.session?.user?.role === "admin") return next();
-  return res.status(403).send("No access");
-}
 
 // Pages
 app.get("/login", (req, res) => res.render("login"));
 app.get("/register", (req, res) => res.render("register"));
+
+
 
 app.get("/vehicles", requireLogin, async (req, res) => {
   const [vehicles] = await db.query(
