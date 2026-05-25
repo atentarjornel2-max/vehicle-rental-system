@@ -61,12 +61,23 @@ router.post("/register", requireNoLogin, async (req, res) => {
       code: err?.code,
       errno: err?.errno,
       sqlState: err?.sqlState,
-      fatal: err?.fatal
+      fatal: err?.fatal,
+      sqlMessage: err?.sqlMessage,
+      stack: err?.stack,
+      // Avoid leaking secrets; only log which DB fields are set
+      dbConfigSnapshot: {
+        DB_HOST: process.env.DB_HOST,
+        DB_PORT: process.env.DB_PORT,
+        DB_USER: process.env.DB_USER,
+        DB_NAME: process.env.DB_NAME
+      }
     });
-    return res.status(500).send("Register error");
+
+    return res.status(500).send("Register error (check server logs)");
   }
 
 });
+
 
 
 module.exports = router;
