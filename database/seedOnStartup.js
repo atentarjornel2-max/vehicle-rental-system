@@ -63,7 +63,6 @@ async function ensureAdmin() {
 
   const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
 
-  // Requires `email` UNIQUE. If it exists, update password/role.
   await db.query(
     `
     INSERT INTO users (fullname, email, password, role)
@@ -79,22 +78,19 @@ async function ensureAdmin() {
   console.log("[SEED] Admin ensured for email:", ADMIN_EMAIL);
 }
 
-async function main() {
+(async () => {
   try {
     await ensureTables();
     await ensureAdmin();
+    console.log("[SEED] Startup seeding finished");
   } catch (err) {
+    // Do not crash app if seeding fails; but log so Render logs show why.
     console.error("[SEED] Startup seeding failed:", {
       message: err?.message,
       code: err?.code,
       sqlState: err?.sqlState,
-      sqlMessage: err?.sqlMessage
+      sqlMessage: err?.sqlMessage,
     });
-    // Do not crash the server; login should still show errors.
   }
-}
-
-main().then(() => {
-  console.log("[SEED] Startup seeding finished");
-});
+})();
 
