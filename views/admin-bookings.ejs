@@ -26,6 +26,13 @@
           <p><b>Dates:</b> <%= b.start_date %> → <%= b.end_date %></p>
           <p><b>Total:</b> ₱<%= b.total_price %></p>
           <p><b>Status:</b> <%= b.status %></p>
+
+          <% if (b.status === 'pending' || b.status === 'approved') { %>
+            <form action="/api/bookings/admin/cancel/<%= b.id %>" method="POST">
+              <button type="submit" class="btn btn--danger" style="width:100%; margin-top:10px;">Cancel booking</button>
+            </form>
+          <% } %>
+
         </div>
       <% }) %>
     <% } %>

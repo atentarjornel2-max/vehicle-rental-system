@@ -153,8 +153,11 @@ app.get("/my-bookings", requireLogin, async (req, res) => {
     status_class:
       r.status === "approved" ? "badge--green" :
       r.status === "rejected" ? "badge--red" :
+      r.status === "cancelled" ? "badge--red" :
       "badge--yellow"
   }));
+
+
 
   res.render("my-bookings", { bookings });
 });

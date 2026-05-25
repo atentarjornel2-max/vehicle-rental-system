@@ -121,5 +121,56 @@ router.post("/reject/:id", async (req, res) => {
   }
 });
 
+// ================= USER CANCEL BOOKING =================
+// Allows: user cancels their own booking when status is pending or approved
+router.post("/cancel/:id", async (req, res) => {
+  try {
+    const userId = req.session?.user?.id;
+    if (!userId) return res.status(403).send("No access");
+
+    const bookingId = req.params.id;
+
+    const [rows] = await db.query(
+      "SELECT id, user_id, status FROM bookings WHERE id = ?",
+      [bookingId]
+    );
+
+    const booking = rows?.[0];
+    if (!booking) return res.send("Booking not found");
+    if (Number(booking.user_id) !== Number(userId)) return res.status(403).send("No access");
+
+    if (booking.status !== "pending" && booking.status !== "approved") {
+      return res.send("Booking cannot be cancelled");
+    }
+
+    await db.query("UPDATE bookings SET status = 'cancelled' WHERE id = ?", [bookingId]);
+
+    res.redirect("/my-bookings");
+  } catch (err) {
+    res.send(String(err.message || err));
+  }
+});
+
+// ================= ADMIN CANCEL BOOKING =================
+router.post("/admin/cancel/:id", async (req, res) => {
+  try {
+    if (req.session?.user?.role !== "admin") return res.status(403).send("No access");
+
+    const bookingId = req.params.id;
+    const [rows] = await db.query(
+      "SELECT id FROM bookings WHERE id = ?",
+      [bookingId]
+    );
+
+    if (!rows?.length) return res.send("Booking not found");
+
+    await db.query("UPDATE bookings SET status = 'cancelled' WHERE id = ?", [bookingId]);
+    res.redirect("/admin");
+  } catch (err) {
+    res.send(String(err.message || err));
+  }
+});
+
 module.exports = router;
+
 
