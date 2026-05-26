@@ -1,38 +1,31 @@
-const mysql = require("mysql2/promise");
+const { Pool } = require("pg");
 require("dotenv").config();
 
-const requiredEnv = ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"];
-const missing = requiredEnv.filter((k) => !process.env[k]);
-
-if (missing.length) {
-  console.error("[DB CONFIG ERROR] Missing env vars:", missing);
-  throw new Error(`Missing required DB env vars: ${missing.join(", ")}`);
-}
-
-const pool = mysql.createPool({
+const pool = new Pool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: { rejectUnauthorized: false },
-  waitForConnections: true,
-  connectionLimit: 10,
 });
 
-// ✅ Test connection at startup so the real error shows immediately in logs
-pool.getConnection()
-  .then((conn) => {
-    console.log("[DB] Connected successfully to", process.env.DB_HOST);
-    conn.release();
+pool.connect()
+  .then(client => {
+    console.log("[DB] Connected to PostgreSQL:", process.env.DB_HOST);
+    client.release();
   })
-  .catch((err) => {
-    console.error("[DB CONNECTION FAILED]", {
-      message: err.message,
-      code: err.code,
-      errno: err.errno,
-      sqlState: err.sqlState,
-    });
-  });
+  .catch(err => console.error("[DB CONNECTION FAILED]", err.message));
 
-module.exports = pool;
+// Wrap to match your existing mysql2 usage: db.query() returns [rows]
+const db = {
+  query: async (sql, params) => {
+    // Convert MySQL ? placeholders to PostgreSQL $1, $2, ...
+    let i = 0;
+    const pgSql = sql.replace(/\?/g, () => `$${++i}`);
+    const result = await pool.query(pgSql, params);
+    return [result.rows, result.fields];
+  }
+};
+
+module.exports = db;

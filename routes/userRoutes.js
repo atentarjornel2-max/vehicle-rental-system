@@ -31,9 +31,16 @@ router.post("/register", requireNoLogin, async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const [result] = await db.query(
-      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user')",
-      [fullname, email, hashedPassword]
-    );
+  "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user') RETURNING id",
+  [fullname, email, hashedPassword]
+);
+const newUserId = result?.[0]?.id;
+
+    console.log("[REGISTER] inserted user", {
+      email,
+      insertId: result?.insertId,
+      dbName: process.env.DB_NAME,
+    });
 
     const newUserId = result?.insertId;
     const [createdRows] = await db.query(
@@ -43,6 +50,13 @@ router.post("/register", requireNoLogin, async (req, res) => {
     const user = createdRows?.[0];
 
     if (user?.id) {
+      console.log("[REGISTER] created row", {
+        id: user.id,
+        fullname: user.fullname,
+        email: user.email,
+        role: user.role,
+      });
+
       req.session.user = {
         id: user.id,
         fullname: user.fullname,

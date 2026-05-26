@@ -21,10 +21,14 @@ app.use(express.static("public"));
 
 app.use(
   session({
-    // Render error fix: express-session requires a non-empty secret in production
+    // Render: ensure cookies work over HTTPS and across redirects
     secret: process.env.SESSION_SECRET || "dev_session_secret",
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // requires HTTPS (Render)
+      sameSite: "lax",
+    },
   })
 );
 
@@ -56,11 +60,20 @@ app.post("/login", async (req, res) => {
       });
     }
 
+    console.log("[LOGIN] attempting login", {
+      email,
+      dbName: process.env.DB_NAME,
+    });
+
     const [users] = await db.query(
       "SELECT * FROM users WHERE email=?",
       [email]
     );
 
+    console.log("[LOGIN] query result count", {
+      email,
+      count: users?.length || 0,
+    });
 
     if (users.length === 0) return res.send("User not found");
 
