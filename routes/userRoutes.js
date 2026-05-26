@@ -1,81 +1,150 @@
 const express = require("express");
-const router = express.Router();
 const bcrypt = require("bcrypt");
 const db = require("../config/db");
 
-function requireNoLogin(req, res, next) {
-  if (req.session?.user?.id) {
-    return res.redirect(req.session.user.role === "admin" ? "/admin" : "/dashboard");
-  }
-  next();
-}
+const router = express.Router();
 
-// ================= REGISTER =================
-router.post("/register", requireNoLogin, async (req, res) => {
-  const { fullname, email, password, confirmPassword } = req.body || {};
-
-  if (!fullname || !email || !password || !confirmPassword) {
-    return res.status(400).send("All fields are required");
-  }
-
-  if (password !== confirmPassword) {
-    return res.status(400).send("Passwords do not match");
-  }
-
+/*
+|--------------------------------------------------------------------------
+| REGISTER USER
+|--------------------------------------------------------------------------
+*/
+router.post("/register", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-    if (rows.length > 0) {
-      return res.status(409).send("Email already exists");
+    const { fullname, email, password } = req.body;
+
+    // Validate input
+    if (!fullname || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
     }
 
+    // Check if email already exists
+    const [existingUsers] = await db.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (existingUsers.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Insert new user (PostgreSQL RETURNING id)
     const [result] = await db.query(
-  "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user') RETURNING id",
-  [fullname, email, hashedPassword]
-);
-const newUserId = result?.[0]?.id;
+      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user') RETURNING id",
+      [fullname, email, hashedPassword]
+    );
 
-    console.log("[REGISTER] inserted user", {
+    // PostgreSQL returns rows array
+    const newUserId = result?.[0]?.id;
+
+    // Create session
+    req.session.user = {
+      id: newUserId,
+      fullname,
       email,
-      insertId: result?.insertId,
-      dbName: process.env.DB_NAME,
+      role: "user",
+    };
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      user: req.session.user,
     });
 
-    const newUserId = result?.insertId;
-    const [createdRows] = await db.query(
-      "SELECT id, fullname, email, role FROM users WHERE id = ?",
-      [newUserId]
-    );
-    const user = createdRows?.[0];
+  } catch (error) {
+    console.error("REGISTER ERROR:", error);
 
-    if (user?.id) {
-      console.log("[REGISTER] created row", {
-        id: user.id,
-        fullname: user.fullname,
-        email: user.email,
-        role: user.role,
+    return res.status(500).json({
+      success: false,
+      message: "Server error during registration",
+    });
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| LOGIN USER
+|--------------------------------------------------------------------------
+*/
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
       });
-
-      req.session.user = {
-        id: user.id,
-        fullname: user.fullname,
-        email: user.email,
-        role: user.role,
-      };
-      return res.redirect(user.role === "admin" ? "/admin" : "/dashboard");
     }
 
-    return res.redirect("/login");
+    // Find user
+    const [users] = await db.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
 
-  } catch (err) {
-    console.error("[REGISTER ERROR]", {
-      message: err?.message,
-      code: err?.code,
-      sqlMessage: err?.sqlMessage,
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const user = users[0];
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Save session
+    req.session.user = {
+      id: user.id,
+      fullname: user.fullname,
+      email: user.email,
+      role: user.role,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      user: req.session.user,
     });
-    return res.status(500).send("Registration failed. Please try again.");
+
+  } catch (error) {
+    console.error("LOGIN ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error during login",
+    });
   }
+});
+
+/*
+|--------------------------------------------------------------------------
+| LOGOUT USER
+|--------------------------------------------------------------------------
+*/
+router.get("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/login");
+  });
 });
 
 module.exports = router;
