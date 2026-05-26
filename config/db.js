@@ -1,32 +1,33 @@
 const { Pool } = require("pg");
+
 require("dotenv").config();
 
 const pool = new Pool({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
+  port: Number(process.env.DB_PORT),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
   ssl: {
-    require: true,
     rejectUnauthorized: false,
   },
 });
 
 // Test connection
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error("[DB CONNECTION FAILED]", err.message);
-  } else {
+pool.connect()
+  .then(client => {
     console.log("[DB] Connected to PostgreSQL");
-    release();
-  }
-});
+    client.release();
+  })
+  .catch(err => {
+    console.error("[DB CONNECTION FAILED]", err.message);
+  });
 
-// Wrapper to support mysql2-style queries
+// MySQL-style wrapper
 const db = {
   query: async (sql, params = []) => {
+
     let i = 0;
 
     const convertedSql = sql.replace(/\?/g, () => `$${++i}`);
@@ -34,7 +35,7 @@ const db = {
     const result = await pool.query(convertedSql, params);
 
     return [result.rows];
-  },
+  }
 };
 
 module.exports = db;

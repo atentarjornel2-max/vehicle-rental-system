@@ -1,54 +1,54 @@
 const db = require("../config/db");
 
-// USERS
-db.query(`
-CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    fullname VARCHAR(100),
-    email VARCHAR(100) UNIQUE,
-    password VARCHAR(255),
-    role VARCHAR(20) DEFAULT 'user'
-)
-`);
+async function initDatabase() {
+  try {
 
-// VEHICLES
-db.query(`
-CREATE TABLE IF NOT EXISTS vehicles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100),
-    brand VARCHAR(100),
-    price_per_day DECIMAL(10,2),
-    status VARCHAR(20) DEFAULT 'available',
-    image VARCHAR(255)
-)
-`);
+    // USERS TABLE
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        fullname VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role VARCHAR(50) DEFAULT 'user',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-// BOOKINGS
-db.query(`
-CREATE TABLE IF NOT EXISTS bookings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    vehicle_id INT,
-    start_date DATE,
-    end_date DATE,
-    total_price DECIMAL(10,2),
-    status VARCHAR(20) DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
-`);
+    // VEHICLES TABLE
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS vehicles (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        brand VARCHAR(255),
+        price_per_day NUMERIC(10,2) NOT NULL,
+        image TEXT,
+        availability BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
+    // BOOKINGS TABLE
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS bookings (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE CASCADE,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        total_price NUMERIC(10,2),
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-// REVIEWS
-db.query(`
-CREATE TABLE IF NOT EXISTS reviews (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    vehicle_id INT,
-    rating INT,
-    comment TEXT
-)
-`);
+    console.log("[DB] Tables initialized successfully");
 
-console.log("✅ Database initialized successfully");
+  } catch (error) {
 
-process.exit();
+    console.error("[DB INIT ERROR]", error.message);
+
+  }
+}
+
+module.exports = initDatabase;

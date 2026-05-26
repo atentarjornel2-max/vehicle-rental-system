@@ -6,14 +6,14 @@ const router = express.Router();
 
 /*
 |--------------------------------------------------------------------------
-| REGISTER USER
+| REGISTER
 |--------------------------------------------------------------------------
 */
 router.post("/register", async (req, res) => {
   try {
+
     const { fullname, email, password } = req.body;
 
-    // Validate input
     if (!fullname || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -21,7 +21,7 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Check if email already exists
+    // Check existing email
     const [existingUsers] = await db.query(
       "SELECT * FROM users WHERE email = ?",
       [email]
@@ -37,15 +37,14 @@ router.post("/register", async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-// Insert new user (MySQL: insertId)
+    // Insert user
     const [result] = await db.query(
-      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user')",
+      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user') RETURNING id",
       [fullname, email, hashedPassword]
     );
 
-    const newUserId = result?.insertId;
+    const newUserId = result?.[0]?.id;
 
-    // Create session
     req.session.user = {
       id: newUserId,
       fullname,
@@ -60,33 +59,27 @@ router.post("/register", async (req, res) => {
     });
 
   } catch (error) {
+
     console.error("REGISTER ERROR:", error);
 
     return res.status(500).json({
       success: false,
       message: "Server error during registration",
     });
+
   }
 });
 
 /*
 |--------------------------------------------------------------------------
-| LOGIN USER
+| LOGIN
 |--------------------------------------------------------------------------
 */
 router.post("/login", async (req, res) => {
   try {
+
     const { email, password } = req.body;
 
-    // Validate input
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
-      });
-    }
-
-    // Find user
     const [users] = await db.query(
       "SELECT * FROM users WHERE email = ?",
       [email]
@@ -95,23 +88,24 @@ router.post("/login", async (req, res) => {
     if (users.length === 0) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid credentials",
       });
     }
 
     const user = users[0];
 
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
 
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid credentials",
       });
     }
 
-    // Save session
     req.session.user = {
       id: user.id,
       fullname: user.fullname,
@@ -126,24 +120,31 @@ router.post("/login", async (req, res) => {
     });
 
   } catch (error) {
+
     console.error("LOGIN ERROR:", error);
 
     return res.status(500).json({
       success: false,
       message: "Server error during login",
     });
+
   }
 });
 
 /*
 |--------------------------------------------------------------------------
-| LOGOUT USER
+| LOGOUT
 |--------------------------------------------------------------------------
 */
 router.get("/logout", (req, res) => {
+
   req.session.destroy(() => {
-    res.redirect("/login");
+    res.json({
+      success: true,
+      message: "Logged out successfully",
+    });
   });
+
 });
 
 module.exports = router;
