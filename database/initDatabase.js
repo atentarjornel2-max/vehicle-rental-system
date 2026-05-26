@@ -1,12 +1,12 @@
 const db = require("../config/db");
 
 async function initDatabase() {
+
   try {
 
-    // USERS TABLE
     await db.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
+        id INT AUTO_INCREMENT PRIMARY KEY,
         fullname VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password TEXT NOT NULL,
@@ -15,34 +15,32 @@ async function initDatabase() {
       )
     `);
 
-    // VEHICLES TABLE
     await db.query(`
       CREATE TABLE IF NOT EXISTS vehicles (
-        id SERIAL PRIMARY KEY,
+        id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         brand VARCHAR(255),
-        price_per_day NUMERIC(10,2) NOT NULL,
+        price_per_day DECIMAL(10,2),
         image TEXT,
         availability BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // BOOKINGS TABLE
     await db.query(`
       CREATE TABLE IF NOT EXISTS bookings (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE CASCADE,
-        start_date DATE NOT NULL,
-        end_date DATE NOT NULL,
-        total_price NUMERIC(10,2),
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT,
+        vehicle_id INT,
+        start_date DATE,
+        end_date DATE,
+        total_price DECIMAL(10,2),
         status VARCHAR(50) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    console.log("[DB] Tables initialized successfully");
+    console.log("[DB] Tables initialized");
 
   } catch (error) {
 

@@ -1,6 +1,7 @@
 const db = require("../config/db");
 
 async function seedOnStartup() {
+
   try {
 
     const [vehicles] = await db.query(
@@ -18,7 +19,8 @@ async function seedOnStartup() {
         ('Ford Ranger', 'Ford', 5000, '/images/ranger.jpg', true)
       `);
 
-      console.log("[SEED] Vehicles inserted");
+      console.log("[SEED] Default vehicles inserted");
+
     }
 
   } catch (error) {

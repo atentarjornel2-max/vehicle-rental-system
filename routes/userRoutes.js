@@ -10,28 +10,34 @@ const router = express.Router();
 |--------------------------------------------------------------------------
 */
 router.post("/register", async (req, res) => {
+
   try {
 
     const { fullname, email, password } = req.body;
 
+    // Validate fields
     if (!fullname || !email || !password) {
+
       return res.status(400).json({
         success: false,
         message: "All fields are required",
       });
+
     }
 
-    // Check existing email
+    // Check existing user
     const [existingUsers] = await db.query(
       "SELECT * FROM users WHERE email = ?",
       [email]
     );
 
     if (existingUsers.length > 0) {
+
       return res.status(400).json({
         success: false,
         message: "Email already exists",
       });
+
     }
 
     // Hash password
@@ -39,12 +45,13 @@ router.post("/register", async (req, res) => {
 
     // Insert user
     const [result] = await db.query(
-      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user') RETURNING id",
+      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user')",
       [fullname, email, hashedPassword]
     );
 
-    const newUserId = result?.[0]?.id;
+    const newUserId = result.insertId;
 
+    // Save session
     req.session.user = {
       id: newUserId,
       fullname,
@@ -68,6 +75,7 @@ router.post("/register", async (req, res) => {
     });
 
   }
+
 });
 
 /*
@@ -76,36 +84,44 @@ router.post("/register", async (req, res) => {
 |--------------------------------------------------------------------------
 */
 router.post("/login", async (req, res) => {
+
   try {
 
     const { email, password } = req.body;
 
+    // Find user
     const [users] = await db.query(
       "SELECT * FROM users WHERE email = ?",
       [email]
     );
 
     if (users.length === 0) {
+
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
       });
+
     }
 
     const user = users[0];
 
+    // Compare password
     const isMatch = await bcrypt.compare(
       password,
       user.password
     );
 
     if (!isMatch) {
+
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
       });
+
     }
 
+    // Create session
     req.session.user = {
       id: user.id,
       fullname: user.fullname,
@@ -129,6 +145,7 @@ router.post("/login", async (req, res) => {
     });
 
   }
+
 });
 
 /*
@@ -139,10 +156,12 @@ router.post("/login", async (req, res) => {
 router.get("/logout", (req, res) => {
 
   req.session.destroy(() => {
+
     res.json({
       success: true,
       message: "Logged out successfully",
     });
+
   });
 
 });
