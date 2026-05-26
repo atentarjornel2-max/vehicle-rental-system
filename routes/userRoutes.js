@@ -37,14 +37,13 @@ router.post("/register", async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert new user (PostgreSQL RETURNING id)
+// Insert new user (MySQL: insertId)
     const [result] = await db.query(
-      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user') RETURNING id",
+      "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, 'user')",
       [fullname, email, hashedPassword]
     );
 
-    // PostgreSQL returns rows array
-    const newUserId = result?.[0]?.id;
+    const newUserId = result?.insertId;
 
     // Create session
     req.session.user = {
