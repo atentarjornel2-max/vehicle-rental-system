@@ -154,16 +154,10 @@ router.post("/login", async (req, res) => {
 |--------------------------------------------------------------------------
 */
 router.get("/logout", (req, res) => {
-
   req.session.destroy(() => {
-
-    res.json({
-      success: true,
-      message: "Logged out successfully",
-    });
-
+    // For browser navigation
+    res.redirect('/');
   });
-
 });
 
 module.exports = router;
